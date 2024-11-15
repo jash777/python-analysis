@@ -1,0 +1,25 @@
+high_risk_ports:
+  - 22
+  - 23
+  - 3389
+  - 445
+  - 135
+  - 137
+  - 138
+  - 139
+
+suspicious_countries:
+  - Reserved
+  - Unknown
+  - Local
+
+high_risk_apps:
+  - P2P
+  - EXPLOIT
+  - MALWARE
+  - PROXY
+  - BOTNET
+  - BACKDOOR
+
+port_scan_threshold: 20
+time_window: 1h
