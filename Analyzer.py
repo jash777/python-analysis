@@ -11,17 +11,19 @@ from pathlib import Path
 import re
 
 class FortiGateLogAnalyzer:
-    def __init__(self, logs: Union[str, Path], cache_enabled: bool = True):
+    def __init__(self, logs: Union[List[Path], List[str], Path, str], cache_enabled: bool = True):
         """
-        Initialize the analyzer with logs from string or file path
+        Initialize the analyzer with multiple logs
         
         Args:
-            logs: Raw log content or path to log file
+            logs: List of log files/contents or single log file/content
             cache_enabled: Enable caching for performance optimization
         """
         self.cache_enabled = cache_enabled
         self.logger = self._setup_logging()
-        self.raw_logs = self._load_logs(logs)
+        
+        # Handle multiple logs
+        self.raw_logs = self._load_multiple_logs(logs)
         self.df = self._parse_logs()
         self.analysis_results = {}
         
@@ -36,16 +38,25 @@ class FortiGateLogAnalyzer:
             logger.setLevel(logging.INFO)
         return logger
 
-    def _load_logs(self, logs: Union[str, Path]) -> str:
-        """Load logs from string or file"""
-        if isinstance(logs, Path) or (isinstance(logs, str) and Path(logs).exists()):
+    def _load_multiple_logs(self, logs: Union[List[Path], List[str], Path, str]) -> str:
+        """Load and combine multiple log files/contents"""
+        combined_logs = []
+        
+        # Convert single input to list
+        if isinstance(logs, (str, Path)):
+            logs = [logs]
+        
+        for log in logs:
             try:
-                with open(logs, 'r', encoding='utf-8') as f:
-                    return f.read()
+                if isinstance(log, Path) or (isinstance(log, str) and Path(log).exists()):
+                    with open(log, 'r', encoding='utf-8') as f:
+                        combined_logs.append(f.read())
+                else:
+                    combined_logs.append(log)
             except Exception as e:
-                self.logger.error(f"Error reading log file: {e}")
-                raise
-        return logs
+                self.logger.error(f"Error reading log {log}: {e}")
+                
+        return "\n".join(combined_logs)
 
     @lru_cache(maxsize=128)
     def _parse_line(self, line: str) -> Dict[str, Any]:
@@ -364,17 +375,20 @@ class FortiGateLogAnalyzer:
         """Generate comprehensive text-based report"""
         report = []
         
-        # Report Header
+        # Enhanced Report Header for Multiple Files
         report.extend([
             "="*80,
-            "FIREWALL LOG ANALYSIS REPORT",
+            "MULTI-FILE FIREWALL LOG ANALYSIS REPORT",
             "="*80,
             f"Report Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            f"Analysis Period: {self.df['date'].iloc[0]} {self.df['time'].iloc[0]} to {self.df['date'].iloc[-1]} {self.df['time'].iloc[-1]}",
+            f"Total Records Analyzed: {len(self.df):,}",
+            "Analysis Period:",
+            f"  Start: {self.df['date'].iloc[0]} {self.df['time'].iloc[0]}",
+            f"  End: {self.df['date'].iloc[-1]} {self.df['time'].iloc[-1]}",
             "="*80,
             ""
         ])
-
+        
         # 1. Executive Summary
         report.extend([
             "1. EXECUTIVE SUMMARY",
@@ -812,15 +826,3 @@ class FortiGateLogAnalyzer:
             concerns.append(f"Error during security analysis: {str(e)}")
         
         return concerns
-
-# Usage example
-if __name__ == "__main__":
-    # Using forticloud.log file
-    log_file = Path("forticloud.log")
-    analyzer = FortiGateLogAnalyzer(logs=log_file)
-    report = analyzer.generate_text_report()
-    
-    # Save report to file
-    output_file = Path("firewall_analysis_report.txt")
-    output_file.write_text(report)
-    print(f"Report has been saved to: {output_file.absolute()}")
