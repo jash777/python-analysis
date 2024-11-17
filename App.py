@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Verify the environment variable is set correctly
-host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11435")
+host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
 print(f"Using Ollama host: {host}")
 
 # Make sure the environment variable is set correctly
